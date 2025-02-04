@@ -6,6 +6,7 @@
 #include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>
 #include <Adafruit_Fingerprint.h>
+#include "secrets.h" // Separate file for Wi-Fi credentials
 
 // Pin Definitions
 constexpr uint8_t RST_PIN = D3;
@@ -21,34 +22,27 @@ LiquidCrystal_I2C lcd(0x27, 16, 2);
 SoftwareSerial fingerSerial(FINGERPRINT_TX, FINGERPRINT_RX);
 Adafruit_Fingerprint finger = Adafruit_Fingerprint(&fingerSerial);
 
-// WiFi Credentials
-const char* ssid = "YOUR_WIFI_SSID";
-const char* password = "YOUR_WIFI_PASSWORD";
-const char* serverUrl = "http://yourserver.com/alert";
-
 // Authorized RFID Tags
 struct RFIDTag {
-  String uid;
-  String name;
+  const char* uid;
+  const char* name;
 };
-RFIDTag masterTags[3] = {
+
+RFIDTag masterTags[] = {
   {"854ED383", "Tag_1"},
   {"19D968D3", "Tag_2"},
   {"57EF3835", "Tag_3"}
 };
 
-String tagID = "";
+const int tagCount = sizeof(masterTags) / sizeof(masterTags[0]);
+String lastMessage = "";
 unsigned long lastOpenTime = 0;
 
 void setup() {
   Serial.begin(9600);
   lcd.begin(16, 2);
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print("Scan RFID/FP");
-  lcd.setCursor(0, 1);
-  lcd.print("or Enter PIN");
   lcd.setBacklight(255);
+  updateLCD("Scan RFID/FP\nor Enter PIN");
 
   Wire.begin();
   if (!rtc.begin()) {
@@ -66,81 +60,95 @@ void setup() {
 
   pinMode(RELAY_CONTROL_PIN, OUTPUT);
   digitalWrite(RELAY_CONTROL_PIN, HIGH);
-
-  WiFi.begin(ssid, password);
-  Serial.print("Connecting to Wi-Fi");
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-  }
-  Serial.println("Connected!");
+  connectWiFi();
 }
 
 void loop() {
   if (getID() || checkFingerprint()) {
     grantAccess();
   }
-
   if (millis() - lastOpenTime > 2000) {
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("TEAM INNOVOBOTIX");
-    lcd.setCursor(0, 1);
-    lcd.print("Scan RFID/FP");
+    updateLCD("TEAM INNOVOBOTIX\nScan RFID/FP");
   }
 }
 
+void connectWiFi() {
+  WiFi.begin(ssid, password);
+  Serial.print("Connecting to Wi-Fi");
+  unsigned long startAttemptTime = millis();
+  while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < 15000) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println(WiFi.status() == WL_CONNECTED ? "Connected!" : "Failed to connect to Wi-Fi");
+}
+
 boolean getID() {
-  if (!mfrc522.PICC_IsNewCardPresent() || !mfrc522.PICC_ReadCardSerial()) {
-    return false;
-  }
-  tagID = "";
-  for (uint8_t i = 0; i < 4; i++) {
-    tagID.concat(String(mfrc522.uid.uidByte[i], HEX));
-  }
-  tagID.toUpperCase();
+  if (!mfrc522.PICC_IsNewCardPresent() || !mfrc522.PICC_ReadCardSerial()) return false;
+
+  char tagID[9];
+  snprintf(tagID, sizeof(tagID), "%02X%02X%02X%02X", mfrc522.uid.uidByte[0], mfrc522.uid.uidByte[1], mfrc522.uid.uidByte[2], mfrc522.uid.uidByte[3]);
   mfrc522.PICC_HaltA();
-  for (int i = 0; i < 3; i++) {
-    if (tagID == masterTags[i].uid) return true;
+
+  for (int i = 0; i < tagCount; i++) {
+    if (strcmp(tagID, masterTags[i].uid) == 0) return true;
   }
+
   sendAlert(tagID);
   return false;
 }
 
 boolean checkFingerprint() {
-  int id = finger.getImage();
-  if (id != FINGERPRINT_OK) return false;
-  id = finger.image2Tz();
-  if (id != FINGERPRINT_OK) return false;
-  id = finger.fingerFastSearch();
-  if (id == FINGERPRINT_OK) return true;
+  if (finger.getImage() != FINGERPRINT_OK) return false;
+  if (finger.image2Tz() != FINGERPRINT_OK) return false;
+  if (finger.fingerFastSearch() == FINGERPRINT_OK) return true;
+
   sendAlert("Fingerprint");
   return false;
 }
 
 void grantAccess() {
   Serial.println("Access Granted! Activating the relay...");
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print("Access Granted!");
+  updateLCD("Access Granted!");
+
   digitalWrite(RELAY_CONTROL_PIN, LOW);
-  delay(5000);
+  unsigned long grantStart = millis();
+  while (millis() - grantStart < 5000) {
+    delay(1);
+  }
   Serial.println("Deactivating the relay...");
   digitalWrite(RELAY_CONTROL_PIN, HIGH);
   lastOpenTime = millis();
 }
 
 void sendAlert(String id) {
-  if (WiFi.status() == WL_CONNECTED) {
-    HTTPClient http;
-    http.begin(serverUrl);
-    http.addHeader("Content-Type", "application/json");
-    String payload = "{\"id\": \"" + id + "\"}";
-    int httpResponseCode = http.POST(payload);
-    Serial.print("Alert sent. Server Response: ");
-    Serial.println(httpResponseCode);
-    http.end();
-  } else {
+  if (WiFi.status() != WL_CONNECTED) {
     Serial.println("WiFi not connected. Alert not sent.");
+    return;
+  }
+  HTTPClient http;
+  http.begin(serverUrl);
+  http.addHeader("Content-Type", "application/json");
+  String payload = "{\"id\": \"" + id + "\"}";
+  
+  int retries = 3;
+  int httpResponseCode = -1;
+  while (retries-- > 0 && httpResponseCode < 0) {
+    httpResponseCode = http.POST(payload);
+    if (httpResponseCode > 0) break;
+    Serial.println("Retrying alert...");
+    delay(2000);
+  }
+  Serial.print("Alert sent. Server Response: ");
+  Serial.println(httpResponseCode);
+  http.end();
+}
+
+void updateLCD(const String& message) {
+  if (message != lastMessage) {
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print(message);
+    lastMessage = message;
   }
 }
