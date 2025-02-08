@@ -152,3 +152,4 @@ void updateLCD(const String& message) {
     lastMessage = message;
   }
 }
+// Please Do Not Use This For Your Project without Prior Information, The Project Is Yet To Meet The Expected Outcomes.
