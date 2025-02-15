@@ -4,7 +4,9 @@
 ## Gaurav Powar, Team Innovobotix
 
 ### Description
-This project is an RFID-based access control system that utilizes an ESP8266 microcontroller, an MFRC522 RFID module, a DS3231 RTC module, and an I2C LCD display. It grants access to authorized users and logs unauthorized attempts, sending alerts via WiFi.
+This RFID-based Access Control System enhances security by verifying user credentials through RFID tags. Built around an ESP8266 microcontroller, the system integrates an MFRC522 RFID reader, DS3231 Real-Time Clock (RTC) module, and a 16x2 I2C LCD display. 
+
+Upon successful authentication, a relay module unlocks a door while logging the access event with an accurate timestamp. Unauthorized attempts are logged, and alerts are sent via WiFi for remote monitoring. This system is ideal for securing restricted areas in homes, offices, or industrial facilities.
 
 ### Components Required
 - **ESP8266** (NodeMCU or similar)
@@ -17,6 +19,7 @@ This project is an RFID-based access control system that utilizes an ESP8266 mic
 - **Power Supply**
 
 ### Wiring Instructions
+
 #### **MFRC522 to ESP8266**
 | MFRC522 Pin | ESP8266 Pin |
 |------------|------------|
@@ -43,16 +46,23 @@ This project is an RFID-based access control system that utilizes an ESP8266 mic
 | GND     | GND        |
 | VCC     | 5V         |
 
-### Software Dependencies
-- **Arduino IDE** (or PlatformIO)
-- **Libraries:**
-  - MFRC522
-  - SPI
-  - Wire
-  - RTClib
-  - LiquidCrystal_I2C
-  - ESP8266WiFi
-  - ESP8266HTTPClient
+### Software Setup
+
+#### Prerequisites  
+1. Install **Arduino IDE** or **PlatformIO**.  
+2. Add ESP8266 Board Support in the Arduino IDE (**Board Manager > ESP8266 by ESP8266 Community**).  
+
+#### Required Libraries  
+- **MFRC522** (for RFID module)  
+- **SPI** (for SPI communication)  
+- **Wire** (for I2C communication)  
+- **RTClib** (for DS3231 RTC)  
+- **LiquidCrystal_I2C** (for LCD display)  
+- **ESP8266WiFi** (for WiFi communication)  
+- **ESP8266HTTPClient** (for sending alerts)  
+
+**Installation:**  
+To install these libraries in Arduino IDE, navigate to **Sketch > Include Library > Manage Libraries**, then search and install each library.
 
 ### Setup & Configuration
 1. Install the required libraries in the Arduino IDE.
@@ -68,16 +78,25 @@ This project is an RFID-based access control system that utilizes an ESP8266 mic
 4. Upload the code to the ESP8266 using Arduino IDE.
 5. Power the circuit and scan an RFID tag.
 
-### Functionality
-- **Authorized Access:** If the scanned RFID tag is in the predefined list, access is granted and the relay is activated.
-- **Unauthorized Access:** If an unregistered tag is scanned, an alert is sent to the server, and access is denied.
-- **Real-Time Clock (RTC):** The system logs access timestamps using the DS3231 module.
-- **LCD Display:** Provides user feedback such as access granted, denied, and system status.
+### Functionality Overview
+
+1. **User Scans RFID Tag** â†’ The MFRC522 module reads the card's unique ID.  
+2. **Authentication Check** â†’ The ESP8266 verifies the ID against a stored list.  
+3. **Access Granted:**  
+   - The relay module activates, unlocking the door.  
+   - LCD displays a welcome message.  
+   - The RTC logs the access timestamp.  
+4. **Access Denied (Unauthorized Tag):**  
+   - LCD displays "Access Denied."  
+   - The attempt is logged with a timestamp.  
+   - An alert is sent via WiFi.  
 
 ### Future Enhancements
-- Integration with a database for dynamic RFID tag management.
-- Web interface for remote monitoring and access control.
-- Additional security layers like PIN entry or biometric authentication.
+- **Web-Based Management Panel**: A web dashboard for remote access control.  
+- **Cloud Storage Integration**: Storing logs in a database.  
+- **Mobile Notifications**: Sending alerts via push notifications.  
+- **Multi-Factor Authentication**: Adding a password or biometric layer.  
+- **Integration with a database** for dynamic RFID tag management.
 
 ### Troubleshooting
 - **WiFi Not Connecting:** Verify SSID and password, check for signal strength.
@@ -88,6 +107,6 @@ This project is an RFID-based access control system that utilizes an ESP8266 mic
 This project is open-source and free to use under the MIT License.
 
 ---
-*Gaurav Powar*
-*Team Innovobotix*
+*Gaurav Powar*  
+*Team Innovobotix*  
 *gaurav.teaminnovobotix@gmail.com*
