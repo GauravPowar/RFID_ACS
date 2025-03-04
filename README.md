@@ -1,112 +1,76 @@
-# RFID_ACS
-# RFID Access Control System with ESP8266, RTC, and LCD Display
+# RFID & Fingerprint-Based Access Control System
 
-## Gaurav Powar, Team Innovobotix
+## Overview
+This project implements a secure access control system using RFID and fingerprint authentication. It is powered by an ESP8266 microcontroller and integrates an MFRC522 RFID module, an Adafruit fingerprint sensor, an RTC module, and an LCD display for user feedback. Unauthorized access attempts trigger an alert via an HTTP request.
 
-### Description
-This RFID-based Access Control System enhances security by verifying user credentials through RFID tags. Built around an ESP8266 microcontroller, the system integrates an MFRC522 RFID reader, DS3231 Real-Time Clock (RTC) module, and a 16x2 I2C LCD display. 
+## Features
+- RFID authentication with pre-registered tags
+- Fingerprint authentication with Adafruit fingerprint sensor
+- Real-time clock (RTC) integration
+- LCD display for real-time feedback
+- Wi-Fi connectivity for remote alerting
+- Secure relay control for access management
+- PIN-based fallback authentication (planned feature)
 
-Upon successful authentication, a relay module unlocks a door while logging the access event with an accurate timestamp. Unauthorized attempts are logged, and alerts are sent via WiFi for remote monitoring. This system is ideal for securing restricted areas in homes, offices, or industrial facilities.
+## Hardware Requirements
+- ESP8266 (NodeMCU or similar)
+- MFRC522 RFID Reader
+- Adafruit Fingerprint Sensor
+- DS3231 RTC Module
+- LiquidCrystal_I2C 16x2 LCD Display
+- Relay Module
+- Jumper Wires
+- Power Supply (5V)
 
-### Components Required
-- **ESP8266** (NodeMCU or similar)
-- **MFRC522 RFID Reader**
-- **RFID Tags**
-- **DS3231 RTC Module**
-- **I2C LCD Display (16x2)**
-- **Relay Module**
-- **Jumper Wires**
-- **Power Supply**
+## Software Requirements
+- Arduino IDE with ESP8266 Board Support
+- Required Libraries:
+  - `MFRC522.h`
+  - `SPI.h`
+  - `Wire.h`
+  - `RTClib.h`
+  - `LiquidCrystal_I2C.h`
+  - `ESP8266WiFi.h`
+  - `ESP8266HTTPClient.h`
+  - `Adafruit_Fingerprint.h`
 
-### Wiring Instructions
+## Circuit Connections
+| Component        | ESP8266 Pin |
+|-----------------|------------|
+| MFRC522 SS      | D4         |
+| MFRC522 RST     | D3         |
+| Fingerprint TX  | D8         |
+| Fingerprint RX  | D7         |
+| Relay Control   | D1         |
+| LCD SDA         | D2         |
+| LCD SCL         | D5         |
 
-#### **MFRC522 to ESP8266**
-| MFRC522 Pin | ESP8266 Pin |
-|------------|------------|
-| RST        | D3         |
-| SS (SDA)   | D4         |
-| MOSI       | D7         |
-| MISO       | D6         |
-| SCK        | D5         |
-| GND        | GND        |
-| 3.3V       | 3.3V       |
-
-#### **Relay Module**
-| Relay Pin | ESP8266 Pin |
-|-----------|------------|
-| Signal    | D1         |
-| GND       | GND        |
-| VCC       | 5V         |
-
-#### **LCD Display (I2C)**
-| LCD Pin | ESP8266 Pin |
-|---------|------------|
-| SDA     | D2         |
-| SCL     | D1         |
-| GND     | GND        |
-| VCC     | 5V         |
-
-### Software Setup
-
-#### Prerequisites  
-1. Install **Arduino IDE** or **PlatformIO**.  
-2. Add ESP8266 Board Support in the Arduino IDE (**Board Manager > ESP8266 by ESP8266 Community**).  
-
-#### Required Libraries  
-- **MFRC522** (for RFID module)  
-- **SPI** (for SPI communication)  
-- **Wire** (for I2C communication)  
-- **RTClib** (for DS3231 RTC)  
-- **LiquidCrystal_I2C** (for LCD display)  
-- **ESP8266WiFi** (for WiFi communication)  
-- **ESP8266HTTPClient** (for sending alerts)  
-
-**Installation:**  
-To install these libraries in Arduino IDE, navigate to **Sketch > Include Library > Manage Libraries**, then search and install each library.
-
-### Setup & Configuration
-1. Install the required libraries in the Arduino IDE.
-2. Update the WiFi credentials in the code:
+## Setup Instructions
+1. Install Arduino IDE and add ESP8266 board support.
+2. Install the required libraries via the Library Manager.
+3. Clone this repository and open the `.ino` file in Arduino IDE.
+4. Create a `secrets.h` file with Wi-Fi credentials:
    ```cpp
-   const char* ssid = "YOUR_WIFI_SSID";
-   const char* password = "YOUR_WIFI_PASSWORD";
+   #define ssid "YOUR_WIFI_SSID"
+   #define password "YOUR_WIFI_PASSWORD"
+   #define serverUrl "http://yourserver.com/alert"
    ```
-3. Set up the server URL for logging unauthorized access attempts:
-   ```cpp
-   const char* serverUrl = "http://yourserver.com/alert";
-   ```
-4. Upload the code to the ESP8266 using Arduino IDE.
-5. Power the circuit and scan an RFID tag.
+5. Upload the code to your ESP8266.
+6. Power the system and monitor serial output for debug messages.
 
-### Functionality Overview
+## How It Works
+- The system continuously scans for RFID tags and fingerprints.
+- If a recognized RFID tag or fingerprint is detected, the relay is activated, granting access.
+- Unauthorized attempts trigger an HTTP alert to a remote server.
+- The LCD provides real-time status updates.
 
-1. **User Scans RFID Tag** â†’ The MFRC522 module reads the card's unique ID.  
-2. **Authentication Check** â†’ The ESP8266 verifies the ID against a stored list.  
-3. **Access Granted:**  
-   - The relay module activates, unlocking the door.  
-   - LCD displays a welcome message.  
-   - The RTC logs the access timestamp.  
-4. **Access Denied (Unauthorized Tag):**  
-   - LCD displays "Access Denied."  
-   - The attempt is logged with a timestamp.  
-   - An alert is sent via WiFi.  
+## Future Improvements
+- Integration with a secure database for dynamic access control
+- Mobile app for remote monitoring and access management
+- Additional authentication methods (PIN entry, facial recognition)
 
-### Future Enhancements
-- **Web-Based Management Panel**: A web dashboard for remote access control.  
-- **Cloud Storage Integration**: Storing logs in a database.  
-- **Mobile Notifications**: Sending alerts via push notifications.  
-- **Multi-Factor Authentication**: Adding a password or biometric layer.  
-- **Integration with a database** for dynamic RFID tag management.
+## Disclaimer
+**Do not use this project in real-world security applications without extensive testing.** The project is still under development and has not yet met all expected outcomes.
 
-### Troubleshooting
-- **WiFi Not Connecting:** Verify SSID and password, check for signal strength.
-- **RFID Not Scanning:** Ensure proper wiring and power supply.
-- **LCD Not Displaying:** Check I2C address and connections.
-
-### License
-This project is open-source and free to use under the MIT License.
-
----
-*Gaurav Powar*  
-*Team Innovobotix*  
-*gaurav.teaminnovobotix@gmail.com*
+## Acknowledgment
+Developed under **Team Innovobotix**.
